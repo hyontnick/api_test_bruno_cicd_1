@@ -1,0 +1,26 @@
+meta {
+  name: col1_countries_trevorblades
+  type: graphql
+  seq: 2
+}
+
+get {
+  url: https://countries.trevorblades.com/
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  {
+    country(code: "FR") {
+      name
+      capital
+      emoji
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

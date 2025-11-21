@@ -1,0 +1,87 @@
+meta {
+  name: col2_JSONPlaceholder
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://jsonplaceholder.typicode.com/users
+  body: none
+  auth: inherit
+}
+
+headers {
+  Accept: application/json
+}
+
+script:pre-request {
+  const page = Math.floor(Math.random() * 2) + 1;   // 1 ou 2 (car seulement 10 users)
+  const limit = 5;
+  
+  bru.setVar("page", page);
+  bru.setVar("limit", limit);
+  
+  console.log(`Simulation pagination → page ${page}, limit ${limit}`);
+  
+  console.log('nombre de page = ', page)
+}
+
+script:post-response {
+  if (res.getStatus() !== 200) {
+      console.error("Échec requête");
+      return;
+  }
+  
+  const allUsers = res.getBody();                    // tableau de 10 users
+  const page  = parseInt(bru.getVar("page"));
+  const limit = parseInt(bru.getVar("limit"));
+  
+  const start = (page - 1) * limit;
+  const paginatedUsers = allUsers.slice(start, start + limit);
+  
+  console.log(`Page ${page} → ${paginatedUsers.length} users affichés (sur 10 totaux)`);
+  
+  // On sauvegarde la version paginée pour les tests
+  bru.setVar("paginated_users", paginatedUsers);
+  
+  if (paginatedUsers.length > 0) {
+      bru.setVar("saved_user_id", paginatedUsers[0].id);
+      console.log(`User ID sauvegardé → ${paginatedUsers[0].id} (${paginatedUsers[0].name})`);
+  }
+}
+
+tests {
+  test("Status 200 OK", function () {
+      expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Réponse brute contient exactement 10 users", function () {
+      const all = res.getBody();
+      expect(all).to.be.an("array");
+      expect(all.length).to.equal(10);
+  });
+  
+  test("Pagination côté client → exactement 5 users", function () {
+      const paginated = bru.getVar("paginated_users");
+      expect(paginated).to.be.an("array");
+      expect(paginated.length).to.equal(5);
+  });
+  
+  test("Premier user de la page a un nom et un email valides", function () {
+      const paginated = bru.getVar("paginated_users");
+      const first = paginated[0];
+      expect(first.name).to.be.a("string").and.not.empty;
+      expect(first.email).to.include("@");
+  });
+  
+  // explique moi le pourqoui, comment, l'ojectif et le but des different onglet suivant dans bruno car je veut comprendre "Params, Body, Headers, Auth, Script, Assert, Tests, Docs, Setting" soit assez claire et precise sans toute fois etre exautive
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  test de foctionement de l'api
+}

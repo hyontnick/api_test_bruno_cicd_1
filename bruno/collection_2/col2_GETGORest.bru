@@ -1,0 +1,27 @@
+meta {
+  name: col2_GETGORest
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{gorest_base_url}}{{gorest_users_path}}/{{gorest_user_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{gorest_token}}
+}
+
+tests {
+  test("Status 200 OK YES", () => expect(res.status).to.equal(200));
+  test("Même ID", () => expect(res.body.id).to.equal(bru.getVar("gorest_user_id")));
+  test("Même nom", () => expect(res.body.name).to.equal(bru.getVar("gorest_user_name")));
+  test("Email contient test-gorest", () => expect(res.body.email).to.include("test-gorest"));
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

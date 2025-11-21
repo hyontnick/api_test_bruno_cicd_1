@@ -1,0 +1,51 @@
+meta {
+  name: col2_POSTGoRest
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{gorest_base_url}}{{gorest_users_path}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{gorest_token}}
+}
+
+body:json {
+  {
+    "name": "{{jp_random_name}}",
+    "email": "{{jp_random_name}}_{{jp_random_int}}@test-gorest.com",
+    "gender": "male",
+    "status": "active"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.responseTime: lt 20001
+  res.body.status: eq "active"
+}
+
+script:pre-request {
+  const names = ["Lucas", "Emma", "Noahe", "Léa", "Gabriel", "Chloé", "Liam", "Zoe"];
+  bru.setVar("jp_random_name", names[Math.floor(Math.random() * names.length)]);
+  bru.setVar("jp_random_int", Date.now());
+}
+
+script:post-response {
+  if (res.status === 201) {
+      const user = res.body;
+      bru.setVar("gorest_user_id", user.id);
+      bru.setVar("gorest_user_name", user.name);
+      console.log(`Utilisateur GoRest créé → ID: ${user.id} | Nom: ${user.name} | Email: ${user.email}`);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

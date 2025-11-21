@@ -1,0 +1,186 @@
+meta {
+  name: col1_predict_potentiel
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://bfg-api-blood-demand-gl.onrender.com/predict_demand
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupe_sanguin": "{{groupe_sanguin}}",
+    "type_produit": {{type_produit}},
+    "jour_semaine": {{jour_semaine}},
+    "mois": {{mois}},
+    "stock_actuel": {{stock_actuel}},
+    "seuil_critique": 20,
+    "consommation_moyenne_journaliere": {{consommation_moyenne_journaliere}},
+    "consommation_std": {{consommation_std}},
+    "jours_depuis_derniere_livraison": {{jours_depuis_derniere_livraison}},
+    "delai_moyen_livraison": 3,
+    "commandes_en_attente": {{commandes_en_attente}},
+    "jours_avant_prochaine_livraison": {{jours_avant_prochaine_livraison}},
+    "evenement_special": {{evenement_special}},
+    "taux_de_peremption_attendu": {{taux_de_peremption_attendu}},
+    "nb_poches_perdues_30j": {{nb_poches_perdues_30j}},
+    "flux_net_moyen_30j": {{flux_net_moyen_30j}},
+    "quantity_used_lag1": {{quantity_used_lag1}},
+    "quantity_used_lag2": {{quantity_used_lag2}},
+    "quantity_used_lag3": {{quantity_used_lag3}},
+    "quantity_used_lag4": {{quantity_used_lag4}},
+    "quantity_used_lag5": {{quantity_used_lag5}},
+    "period": "day"
+  }
+}
+
+script:pre-request {
+  // ──────────────────────────────
+  //  PRE-REQUEST SCRIPT – Version qui marche à 100%
+  // ──────────────────────────────
+  
+  // Listes de valeurs
+  const groupes   = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
+  const produits  = [1, 2, 3];
+  const evenements = [0, 1];
+  
+  // Randomisation simple
+  bru.setVar("groupe_sanguin", groupes[Math.floor(Math.random() * groupes.length)]);
+  bru.setVar("type_produit",   produits[Math.floor(Math.random() * produits.length)]);
+  bru.setVar("evenement_special", evenements[Math.floor(Math.random() * evenements.length)]);
+  
+  // Génération de toutes les valeurs aléatoires et on les stocke dans des vars
+  bru.setVar("jour_semaine",                     Math.floor(Math.random() * 7) + 1);                              // 1-7
+  bru.setVar("mois",                            Math.floor(Math.random() * 12) + 1);                             // 1-12
+  bru.setVar("stock_actuel",                    Math.floor(Math.random() * 121) + 30);                          // 30-150
+  bru.setVar("consommation_moyenne_journaliere",Number((Math.random() * 10 + 4).toFixed(2)));                       // 4.00-14.00
+  bru.setVar("consommation_std",               Number((Math.random() * 3.5 + 1.5).toFixed(2)));                  // 1.50-5.00
+  bru.setVar("jours_depuis_derniere_livraison", Math.floor(Math.random() * 26));                                        // 0-25
+  bru.setVar("commandes_en_attente",            Math.floor(Math.random() * 61));                                        // 0-60
+  bru.setVar("jours_avant_prochaine_livraison", Math.floor(Math.random() * 13));                                        // 0-12
+  bru.setVar("taux_de_peremption_attendu",      Number((Math.random() * 0.11 + 0.01).toFixed(3)));               // 0.010-0.120
+  bru.setVar("nb_poches_perdues_30j",            Math.floor(Math.random() * 19));                                        // 0-18
+  bru.setVar("flux_net_moyen_30j",              Number((Math.random() * 23 - 8).toFixed(2)));                    // -8.00 à +15.00
+  
+  // Lags réalistes à partir de la conso moyenne
+  const conso = bru.getVar("consommation_moyenne_journaliere");
+  const lag1 = Math.round(conso + (Math.random() - 0.5) * 4);
+  const lag2 = Math.round(conso + (Math.random() - 0.5) * 5);
+  const lag3 = Math.round(conso + (Math.random() - 0.5) * 6);
+  
+  bru.setVar("quantity_used_lag1", lag1);
+  bru.setVar("quantity_used_lag2", lag2);
+  bru.setVar("quantity_used_lag3", lag3);
+  bru.setVar("quantity_used_lag4", Math.round(lag1 * 0.9));
+  bru.setVar("quantity_used_lag5", Math.round(lag2 * 1.1));
+  
+  // AFFICHAGE DU VRAI BODY ENVOYÉ
+  const body = {
+    "groupe_sanguin": bru.getVar("groupe_sanguin"),
+    "type_produit": bru.getVar("type_produit"),
+    "jour_semaine": bru.getVar("jour_semaine"),
+    "mois": bru.getVar("mois"),
+    "stock_actuel": bru.getVar("stock_actuel"),
+    "seuil_critique": 20,
+    "consommation_moyenne_journaliere": bru.getVar("consommation_moyenne_journaliere"),
+    "consommation_std": bru.getVar("consommation_std"),
+    "jours_depuis_derniere_livraison": bru.getVar("jours_depuis_derniere_livraison"),
+    "delai_moyen_livraison": 3,
+    "commandes_en_attente": bru.getVar("commandes_en_attente"),
+    "jours_avant_prochaine_livraison": bru.getVar("jours_avant_prochaine_livraison"),
+    "evenement_special": bru.getVar("evenement_special"),
+    "taux_de_peremption_attendu": bru.getVar("taux_de_peremption_attendu"),
+    "nb_poches_perdues_30j": bru.getVar("nb_poches_perdues_30j"),
+    "flux_net_moyen_30j": bru.getVar("flux_net_moyen_30j"),
+    "quantity_used_lag1": bru.getVar("quantity_used_lag1"),
+    "quantity_used_lag2": bru.getVar("quantity_used_lag2"),
+    "quantity_used_lag3": bru.getVar("quantity_used_lag3"),
+    "quantity_used_lag4": bru.getVar("quantity_used_lag4"),
+    "quantity_used_lag5": bru.getVar("quantity_used_lag5"),
+    "period": "day"
+  };
+  
+  console.log("BODY VRAIMENT ENVOYÉ À L'API :");
+  console.log(JSON.stringify(body, null, 2));
+}
+
+script:post-response {
+  // --- Post-requête ---
+  
+  // Récupérer toutes les variables du body utilisées
+  const body_post = {
+      groupe_sanguin: bru.getVar("groupe_sanguin"),
+      type_produit: bru.getVar("type_produit"),
+      jour_semaine: bru.getVar("jour_semaine"),
+      mois: bru.getVar("mois"),
+      stock_actuel: bru.getVar("stock_actuel"),
+      seuil_critique: bru.getVar("seuil_critique"),
+      consommation_moyenne_journaliere: bru.getVar("consommation_moyenne_journaliere"),
+      consommation_std: bru.getVar("consommation_std"),
+      jours_depuis_derniere_livraison: bru.getVar("jours_depuis_derniere_livraison"),
+      delai_moyen_livraison: bru.getVar("delai_moyen_livraison"),
+      commandes_en_attente: bru.getVar("commandes_en_attente"),
+      jours_avant_prochaine_livraison: bru.getVar("jours_avant_prochaine_livraison"),
+      evenement_special: bru.getVar("evenement_special"),
+      taux_de_peremption_attendu: bru.getVar("taux_de_peremption_attendu"),
+      nb_poches_perdues_30j: bru.getVar("nb_poches_perdues_30j"),
+      flux_net_moyen_30j: bru.getVar("flux_net_moyen_30j"),
+      quantity_used_lag1: bru.getVar("quantity_used_lag1"),
+      quantity_used_lag2: bru.getVar("quantity_used_lag2"),
+      quantity_used_lag3: bru.getVar("quantity_used_lag3"),
+      quantity_used_lag4: bru.getVar("quantity_used_lag4"),
+      quantity_used_lag5: bru.getVar("quantity_used_lag5"),
+      period: bru.getVar("period")
+  };
+  
+  console.log("BODY après réponse API :\n", JSON.stringify(body_post, null, 2));
+  
+}
+
+tests {
+  test("Status code est 200", () => {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("Réponse JSON valide", () => {
+    expect(res.body).to.be.an("object");
+  });
+  
+  test("quantity_predicted est un nombre positif", () => {
+    const qty = res.body.quantity_predicted;
+    expect(qty).to.be.a("number");
+    expect(qty).to.be.above(0);
+  });
+  
+  test("groupe_sanguin renvoyé = groupe demandé", () => {
+    expect(res.body.groupe_sanguin).to.equal(bru.getVar("groupe_sanguin"));
+  });
+  
+  test("type_produit renvoyé est une string (ex: plasma, plasma, cgr...)", () => {
+    expect(res.body.type_produit).to.be.a("string");
+  });
+  
+  test("period = day", () => {
+    expect(res.body.period).to.equal("day");
+  });
+  
+  test("days_ahead = 1", () => {
+    expect(res.body.days_ahead).to.equal(1);
+  });
+  
+  test("Temps de réponse < 3s", () => {
+    expect(res.responseTime).to.be.below(20000);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

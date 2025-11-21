@@ -1,0 +1,71 @@
+meta {
+  name: col2_ReqResPOSTSingleUser_Jsongp
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{jsonph_base_url}}{{jsonph_users_path}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  "{{jsonph_custom_header}}": {{jsonph_custom_value}}
+}
+
+body:json {
+  {
+    "name": "{{jp_random_name}}",
+    "username": "tester_{{jp_random_int}}",
+    "email": "{{jp_random_name}}@test.com",
+    "phone": "1-770-736-8031 x56442",
+    "website": "testjsonplaceholder.org",
+    "address": {
+      "street": "Kulas Light",
+      "suite": "Apt. 556",
+      "city": "Gwenborough",
+      "zipcode": "92998-3874"
+    },
+    "company": {
+      "name": "Test Corp",
+      "catchPhrase": "API testing rocks"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.responseTime: lt 20001
+  res.body.address.city: eq "Gwenborough"
+}
+
+script:pre-request {
+  const names = ["Alice", "Boby", "Charlie", "Diana", "Emma", "Frank", "Grace", "Hugo"];
+  bru.setVar("jp_random_name", names[Math.floor(Math.random() * names.length)]);
+  bru.setVar("jp_random_int", Date.now().toString().slice(-5));
+  console.log(`Création user → {{jp_random_name}} (ID forcé = 10)`);
+}
+
+script:post-response {
+  if (res.status === 201) {
+      const user = res.body;
+      bru.setVar("jp_created_user_id", user.id);           // ← 11, 12, 13…
+      bru.setVar("jp_created_user_name", user.name);
+      console.log(`User créé → ID réel: ${user.id} | Nom: ${user.name}`);
+  }
+}
+
+tests {
+  test("Status 201 Created", () => expect(res.status).to.equal(201));
+  test("ID > 10 (normal pour JSONPlaceholder)", () => expect(res.body.id).to.be.above(10));
+  test("Nom aléatoire bien repris", () => expect(res.body.name).to.equal(bru.getVar("jp_random_name")));
+  test("Email personnalisé présent", () => expect(res.body.email).to.include("@test.com"));
+  test("Temps < 1000ms", () => expect(res.responseTime).to.be.below(20000));
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

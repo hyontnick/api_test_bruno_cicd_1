@@ -1,0 +1,116 @@
+meta {
+  name: col2_ReqResPOST
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}{{api_path_users}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  "{{custom_header_name}}": {{custom_header_value}}
+  x-api-key: {{api_key}}
+}
+
+body:json {
+  {
+    "name": "{{random_name}}",
+    "job": "{{default_job}}"
+  }
+}
+
+assert {
+  res.body.name: eq {{random_name}}
+}
+
+script:pre-request {
+  const names = ["Bruno", "API Master", "TesteurPro", "Dev2025", "GrokLeBoss", "NinjaTester", "QueenOfAPI"];
+  const randomName = names[Math.floor(Math.random() * names.length)];
+  
+  bru.setVar("random_name", randomName);
+  
+  console.log(`Envoi POST création user`);
+  console.log(`→ Nom : ${randomName}`);
+  console.log(`→ Job : ${bru.getEnvVar("default_job")}`);
+  console.log(`→ URL : ${bru.getEnvVar("base_url")}${bru.getEnvVar("api_path_users")}`);
+  console.log(`→ API Key : ${bru.getEnvVar("api_key") || "reqres-free-v1"}`);  // Log de la clé
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+      const data = res.getBody();
+  
+      console.log(`User créé !`);
+      console.log(`→ Nom  : ${data.name}`);
+      console.log(`→ Job  : ${data.job}`);
+      console.log(`→ ID   : ${data.id}`);
+      console.log(`→ Créé le : ${data.createdAt}`);
+  
+      // Sauvegarde en vars runtime (pour PUT/DELETE dans la même collection)
+      bru.setVar("created_user_id", data.id);
+      bru.setVar("created_user_name", data.name);
+      bru.setVar("created_at", data.createdAt);
+  
+      // Optionnel : Sauvegarde en env (persistant dans l'env sélectionné)
+      // bru.setEnvVar("created_user_id", data.id);  // Décommente si tu veux persister
+  
+      console.log(`Variables runtime sauvegardées :`);
+      console.log(`   {{created_user_id}} → ${data.id}`);
+      console.log(`   {{created_user_name}} → ${data.name}`);
+  } else {
+      console.error(`Échec création – Status: ${res.getStatus()}`);
+      console.log(`================End============`);
+  }
+}
+
+tests {
+  test("Status 201 Created", function () {
+      expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Réponse contient id, name, job et createdAt", function () {
+      const json = res.getBody();
+      expect(json).to.have.property("id").that.is.a("string").and.not.empty;
+      expect(json).to.have.property("name").that.is.a("string");
+      expect(json).to.have.property("job").that.is.a("string");
+      expect(json).to.have.property("createdAt").that.is.a("string");
+      
+      // Vérifie que le nom correspond bien à celui généré
+      expect(json.name).to.equal(bru.getVar("random_name"));
+      expect(json.job).to.equal(bru.getEnvVar("default_job"));  // Bonne syntaxe pour env
+  });
+  
+  test("Header custom bien envoyé", function () {
+      const sentHeaders = req.getHeaders();
+      console.log("Headers envoyés :", sentHeaders);  // Log pour debug (regarde la console)
+      
+      const headerKey = bru.getEnvVar("custom_header_name").toLowerCase();
+      const normalizedHeaders = {};  // Normalise toutes les clés en minuscules
+      Object.keys(sentHeaders).forEach(key => {
+          normalizedHeaders[key.toLowerCase()] = sentHeaders[key];
+      });
+      
+      expect(normalizedHeaders).to.have.property(headerKey);
+      expect(normalizedHeaders[headerKey]).to.equal(bru.getEnvVar("custom_header_value"));
+  });
+  
+  test("Temps de réponse < 8000ms", function () {
+      const responseTime = res.responseTime ?? 0;  // Nullish coalescing = propre et moderne
+      console.log(`Temps de réponse : ${responseTime} ms`);
+      expect(responseTime).to.be.a("number").and.to.be.below(1500);
+  });
+  
+  test("Variables bien sauvegardées pour la suite", function () {
+      expect(bru.getVar("created_user_id")).to.exist.and.be.a("string");
+      expect(bru.getVar("created_user_name")).to.equal(bru.getVar("random_name"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

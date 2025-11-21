@@ -1,0 +1,24 @@
+meta {
+  name: col1_Auth_fictive
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://reqres.in/api/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "eve.holt@reqres.in",
+    "password": "cityslicka"
+  }
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

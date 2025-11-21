@@ -1,0 +1,107 @@
+meta {
+  name: col2_ReqResGETSingleUser
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}{{api_path_users}}/{{created_user_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  x-api-key: {{api_key}}
+  "{{custom_header_name}}": {{custom_header_value}}
+}
+
+assert {
+  res.status: eq 404
+  res.responseTime: lte 3000
+  res.headers["content-type"]: contains application/json
+  res.url: contains /{{created_user_id}}
+  res.body: isEmpty
+}
+
+script:pre-request {
+  const id = bru.getVar("created_user_id");
+  console.log(`Tentative de récupération du user ID = ${id}`);
+  
+  if (!id) {
+      console.error("created_user_id non défini → lance d'abord le POST !");
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+  
+  if (status === 404) {
+      console.warn(`User ${bru.getVar("created_user_id")} non trouvé → normal avec ReqRes (mock)`);
+      console.info("Les utilisateurs créés via POST n'existent pas en GET/PUT/DELETE sur ReqRes");
+  } else if (status === 200) {
+      const user = res.getBody().data;
+      console.log(`User trouvé : ${user.first_name} ${user.last_name} (ID: ${user.id})`);
+  } else {
+      console.error(`Erreur inattendue – Status: ${status}`);
+  }
+}
+
+tests {
+  test("Status est soit 200 soit 404 (comportement normal ReqRes)", function () {
+      const status = res.getStatus();
+      expect([200, 404]).to.include(status);   // .oneOf n'existe pas non plus, on utilise .include
+  });
+  
+  test("Si 404 → on accepte sans vérifier le body (pas de crash)", function () {
+      if (res.getStatus() === 404) {
+          // On ne fait rien → le test passe automatiquement
+          // SUPPRIME this.skip() → c’est la source de l’erreur
+          return;
+      }
+      // Si on arrive ici → c’est un 200 (user connu)
+      const user = res.getBody().data;
+      expect(user.id).to.be.a("number");
+      expect(user.email).to.include("@");
+  });
+  
+  test("Temps de réponse raisonnable (< 3000ms)", function () {
+      expect(res.responseTime ?? 0).to.be.a("number").and.to.be.below(3000);
+  });
+  
+  test("Header API key bien envoyé", function () {
+      const headers = req.getHeaders();
+      expect(headers["x-api-key"] || headers["X-API-Key"]).to.equal(bru.getEnvVar("api_key"));
+  });
+  
+  // Tes autres tests (parfaitement bons)
+  test("ASSERTION: Status 404 (normal pour ReqRes mock)", function () {
+      expect(res.status).to.equal(404);
+  });
+  
+  test("ASSERTION: Temps de réponse < 3000ms", function () {
+      expect(res.responseTime).to.be.a("number").and.to.be.below(3000);
+  });
+  
+  test("ASSERTION: Header x-api-key bien envoyé", function () {
+      const headers = req.getHeaders();
+      const apiKey = headers["x-api-key"] || headers["X-API-Key"];
+      expect(apiKey).to.equal("reqres-free-v1");
+  });
+  
+  test("ASSERTION: Header x-custom-test bien envoyé", function () {
+      const headers = req.getHeaders();
+      const customHeader = headers["x-custom-test"] || headers["X-Custom-Test"];
+      expect(customHeader).to.equal("BrunoRules");
+  });
+  
+  test("ASSERTION: URL contient l'ID créé", function () {
+      const url = req.getUrl();
+      const createdId = bru.getVar("created_user_id");
+      expect(url).to.include(`/${createdId}`);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

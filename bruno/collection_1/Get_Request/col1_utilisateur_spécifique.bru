@@ -1,0 +1,16 @@
+meta {
+  name: col1_utilisateur_spécifique
+  type: http
+  seq: 8
+}
+
+get {
+  url: https://jsonplaceholder.typicode.com/users/3
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

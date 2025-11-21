@@ -1,0 +1,44 @@
+meta {
+  name: col1_predict_demand_2
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url_col1}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "groupe_sanguin": "O+",
+    "type_produit": 1,
+    "jour_semaine": 1,
+    "mois": 1,
+    "stock_actuel": 0,
+    "seuil_critique": 0,
+    "consommation_moyenne_journaliere": 0,
+    "consommation_std": 0,
+    "jours_depuis_derniere_livraison": 0,
+    "delai_moyen_livraison": 0,
+    "commandes_en_attente": 0,
+    "jours_avant_prochaine_livraison": 0,
+    "evenement_special": 0,
+    "taux_de_peremption_attendu": 0,
+    "nb_poches_perdues_30j": 0,
+    "flux_net_moyen_30j": 0,
+    "quantity_used_lag1": 0,
+    "quantity_used_lag2": 0,
+    "quantity_used_lag3": 0,
+    "quantity_used_lag4": 0,
+    "quantity_used_lag5": 0,
+    "period": "day"
+  }
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

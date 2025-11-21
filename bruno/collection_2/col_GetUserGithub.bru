@@ -1,0 +1,94 @@
+meta {
+  name: GetGit
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{github_url}}user?dummy=test
+  body: none
+  auth: bearer
+}
+
+params:query {
+  dummy: test
+}
+
+headers {
+  Accept: application/vnd.github+json
+  ~Authorization: token {{github_token}}
+}
+
+auth:bearer {
+  token: {{github_token}}
+}
+
+vars:pre-request {
+  note_message: "Test GitHub"
+}
+
+assert {
+  res.status: eq 200
+  res.responseTime: lt 10000
+  res.body.login: eq "hyontnick"
+  res.body.html_url: contains "hyontnick"
+}
+
+script:pre-request {
+  // Vérifie si le token existe
+  const token = bru.getVar("github_tokenk");
+  
+  if (!token) {
+    console.error("❌ Aucun token GitHub trouvé !");
+  } else {
+    console.log("🔑 Token détecté.");
+    console.log("Test variable note:", bru.getVar("note_message"));
+  }
+  
+  // Ajouter une variable dynamique
+  bru.setVar("request_timestamp", new Date().toISOString());
+  
+}
+
+script:post-response {
+  if (res.status === 200) {
+      console.log("✅ Authentification réussie !");
+      console.log(`Nom : ${res.body.name}`);
+      console.log(`Login : ${res.body.login}`);
+  
+      // Sauvegarde du login dans une variable
+      bru.setVar("last_user_login", res.body.login);
+  } else {
+      console.error(`❌ Échec : Status ${res.status}`);
+  }
+  
+}
+
+tests {
+  test("Status must be 200", () => {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("Response contains an id greater than 0", () => {
+    expect(res.body.id).to.be.greaterThan(0);
+  });
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Récupère les informations de l’utilisateur connecté via GitHub API.
+  Cette requête permet de démontrer l’utilisation des headers, variables,
+  scripts pre-request et post-request dans Bruno.
+  
+  - Headers : Authorization Bearer token
+  - Vars : last_user_login
+  - Pre-request : vérification du token
+  - Post-request : sauvegarde login
+  - Assert/Test : vérifier que le status est 200 et login existe
+  
+}

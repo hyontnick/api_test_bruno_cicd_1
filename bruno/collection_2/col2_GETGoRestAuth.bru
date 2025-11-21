@@ -1,0 +1,312 @@
+meta {
+  name: col2_GETGoRestAuth
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{gorest_base_url}}{{gorest_users_path}}?page=1&per_page=3
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  per_page: 3
+}
+
+headers {
+  Authorization: Bearer {{gorest_token}}
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{gorest_token}}
+}
+
+script:pre-request {
+  // Token gratuit exemple (valide en 2025 – remplace par le tien sur gorest.co.in)
+  const token = "e761243054d12fcec19fba6ad5120789909f08c13ece23acb7c6765189e387d4";  // Exemple des docs
+  bru.setVar("gorest_token", token);
+  
+  console.log("Auth Bearer activé avec token");
+  console.log(`Token utilisé : ${token.substring(0, 10)}...`);  // Masqué pour sécurité
+}
+
+script:post-response {
+  if (res.status === 200) {
+      const users = res.body;  // Auto-parsé en array
+      console.log(`✅ ${users.length} users authentifiés récupérés`);
+     
+      // Sauvegarde un email aléatoire pour test futur
+      if (users.length > 0) {
+          const randomUser = users[Math.floor(Math.random() * users.length)];
+          bru.setVar("test_user_email", randomUser.email);
+          console.log(`→ Email sauvegardé pour test filtre : ${randomUser.email}`);
+      }
+  } else if (res.status === 401) {
+      console.error("🔒 Token invalide ou expiré ! Génère un nouveau sur gorest.co.in/my-account/access-tokens");
+  } else {
+      console.error(`❌ Échec requête GO REST - Status: ${res.status}`);
+  }
+}
+
+tests {
+  test("Status 200 avec Auth", function () {
+      expect(res.status).to.equal(200);
+  });
+  
+  test("Array users avec auth (3 users)", function () {
+      expect(res.body).to.be.an("array").and.to.have.lengthOf(3);
+      res.body.forEach(user => {
+          expect(user).to.have.property("id").that.is.a("number");
+          expect(user.email).to.include("@");
+          expect(user.name).to.be.a("string").and.not.empty;
+      });
+  });
+  
+  test("Header Authorization bien envoyé", function () {
+      const sentHeaders = req.getHeaders();
+      const authHeader = sentHeaders["authorization"] || sentHeaders["Authorization"];
+      expect(authHeader).to.include("Bearer ");
+      expect(authHeader).to.include(bru.getVar("gorest_token").substring(0, 10));  // Vérif partielle pour sécurité
+  });
+  
+  test("Header Accept bien envoyé", function () {
+      const sentHeaders = req.getHeaders();
+      expect(sentHeaders["accept"] || sentHeaders["Accept"]).to.equal("application/json");
+  });
+  
+  test("Temps de réponse < 1000ms", function () {
+      expect(res.responseTime).to.be.a("number").and.to.be.below(10000);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Parfait 🔥
+  Voici ton **2ᵉ exercice niveau Beginner**, légèrement plus avancé mais **toujours simple et clair**.
+  
+  ---
+  
+  # 🟩 **📘 EXERCICE 2 — Niveau Beginner**
+  
+  Voici la réponse JSON retournée par l’API :
+  
+  ```json
+  {
+    "success": true,
+    "user": {
+      "id": 42,
+      "name": "Bob Marley",
+      "email": "bob@example.com"
+    },
+    "meta": {
+      "request_id": "XYZ-999"
+    }
+  }
+  ```
+  
+  Tu dois écrire des tests pour vérifier :
+  
+  ---
+  
+  # ✔️ **👉 1. Le status code doit être 201**
+  
+  ---
+  
+  # ✔️ **👉 2. Le body doit contenir la clé "user"**
+  
+  ---
+  
+  # ✔️ **👉 3. Le champ user.name doit être exactement "Bob Marley"**
+  
+  ---
+  
+  # ✔️ **👉 4. Le champ user.email doit contenir le symbole "@"**
+  
+  (Indice : `.to.contain("@")`)
+  
+  ---
+  
+  # ✔️ **👉 5. Stocker la valeur de user.id dans une variable nommée "userId"**
+  
+  (Indice : `bru.setVar("userId", ...)`)
+  
+  ---
+  
+  # ✔️ **👉 6. Vérifier que meta.request_id existe**
+  
+  (Indice : `.to.have.property("request_id")`)
+  
+  ---
+  
+  # 📌 **Tu dois écrire les 6 réponses sous forme de tests.**
+  
+  Quand tu as fini, je te donne la **correction complète** + **explications**, comme pour l’exercice 1.
+  
+  💪 À toi !
+  
+  # ✔️ **👉 1. Le status code doit être 201**
+  test(" Le status code doit être 201", ()=> {
+    expect(res.status).to.equal(201)
+  });
+  
+  # ✔️ **👉 2. Le body doit contenir la clé "user"**
+  test("Le body doit contenir la clé user", ()=>{
+    expect(res.body).to.have.property("user")
+  });
+  
+  # ✔️ **👉 3. Le champ user.name doit être exactement "Bob Marley"**
+  
+  test("Le champ user.name doit être exactement Bob Marley", ()=>{
+    expect(res.body.name).to.equal("Bob Marley")
+  });
+  
+  # ✔️ **👉 4. Le champ user.email doit contenir le symbole "@"**
+  
+  (Indice : `.to.contain("@")`)
+  
+  test("Le champ user.email doit contenir le symbole @", ()=>{
+    expect(res.body).to.contains("@")
+  });
+  
+  # ✔️ **👉 5. Stocker la valeur de user.id dans une variable nommée "userId"**
+  
+  (Indice : `bru.setVar("userId", ...)`)
+  
+  test("Stocker la valeur de user.id dans une variable nommée userId", ()=>{
+    let userId = bru.setVar("userId", user.id)
+  });
+  
+  # ✔️ **👉 6. Vérifier que meta.request_id existe**
+  
+  (Indice : `.to.have.property("request_id")`)
+  
+  test("Vérifier que meta.request_id existe", ()=>{
+    expect(res.body).to.have.property("request_id")
+  });
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Parfait 🔥
+  Voici ton **Exercice Beginner 3**, un peu plus riche, mais toujours simple.
+  Tu vas manipuler :
+  
+  * status code
+  * headers
+  * JSON imbriqué
+  * existence de champs
+  * valeurs exactes
+  * stockage de données
+  
+  ---
+  
+  # 🟩 **📘 EXERCICE 3 — Niveau Beginner**
+  
+  Voici la réponse API reçue :
+  
+  ### 🟦 **Response Status : 200**
+  
+  ### 🟦 **Response Headers :**
+  
+  ```
+  content-type: application/json
+  x-request-id: abc-123-xyz
+  server: nginx
+  ```
+  
+  ### 🟦 **Response Body :**
+  
+  ```json
+  {
+    "product": {
+      "id": 987,
+      "name": "Laptop Ultra 15",
+      "price": 1499.99,
+      "specs": {
+        "ram": "16GB",
+        "storage": "512GB SSD"
+      }
+    },
+    "available": true
+  }
+  ```
+  
+  ---
+  
+  ## 🎯 **Écris les 7 tests suivants :**
+  
+  ---
+  
+  # ✔️ **1. Vérifier que le status est 200**
+  test("status 200", ()=>{
+    expect(res.status).to.equal(200)
+  });
+  
+  ---
+  
+  # ✔️ **2. Vérifier que le header content-type contient "json"**
+  
+  (indice : `res.headers["content-type"]`)
+  test("type json", ()=>{
+    expect(res.header["content-type"]).to.containt("application/json")
+  });
+  
+  ---
+  
+  # ✔️ **3. Vérifier que product.id existe**
+  
+  test("product id exist", ()=>{
+    expect(res.body.product.id).to.have.property(product.id)
+  });
+  
+  ---
+  
+  # ✔️ **4. Vérifier que product.name = "Laptop Ultra 15"**
+  
+  test("product name exist", ()=>{
+    expect(res.body.product.name).to.equal("Laptop Ultra 15")
+  });
+  ---
+  
+  # ✔️ **5. Vérifier que specs.ram = "16GB"**
+  
+  (indice : `res.body.product.specs.ram`)
+  test("space name = 16GB", ()=>{
+    expect(res.body.product.space.ram).to.equal("16GB")
+  });
+  ---
+  
+  # ✔️ **6. Vérifier que available est true**
+  test("availabel is true", ()=>{
+    expect(res.body.available).to.bootean(true)
+  });
+  ---
+  
+  # ✔️ **7. Stocker product.price dans une variable Bruno appelée "price"**
+  
+  (indice : `bru.setVar("price", ...)`)
+  test("stokck product", ()=>{
+    let price = bru.getVar("price", bru.product.price)
+  });
+  ---
+  
+  # 📌 **Tu dois répondre en écrivant les 7 tests.**
+  
+  Quand tu as fini, je te corrige comme d’habitude (avec explications).
+  
+}

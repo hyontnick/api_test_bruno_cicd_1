@@ -1,0 +1,24 @@
+meta {
+  name: col2_PUTGORest
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{gorest_base_url}}{{gorest_users_path}}/{{gorest_user_id}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{gorest_token}}
+}
+
+body:json {
+  { "name": "{{gorest_user_name}} (modifié)", "status": "inactive" }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
